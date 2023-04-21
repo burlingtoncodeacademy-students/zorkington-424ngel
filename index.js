@@ -36,7 +36,7 @@ const note = new Item(
 
 const mainDining = new Room (
   "Main Dining Room",
-  "You are in the main dining area. A note sits on the counter. You are facing the front door to the outdoor patio. Behind you is a door to the kitchen.",
+  "You are in the main dining area. You are facing the entrance to the outdoor patio. Behind you is a door to the kitchen. A note sits on the counter.",
   [note]
 )
 
@@ -95,9 +95,9 @@ async function start() {
   // GAME LOGIC LOOP
   while (true) {
     let answer = await ask(askforInput)
+    if (answer === 'exit') break
     if (validateInput(answer, validCommands, currentRoom) === true) {
-        doAction(answer)
-        break
+       currentRoom =  doAction(answer, currentRoom)
       }
       
     }
@@ -110,33 +110,49 @@ async function start() {
 
 start()
 
-function doAction(input) {
-  if (input.startsWith('read')) {  
-    input = input.split(' ')
-    console.log(objLookup[input[1]].description)
-  } else if (input.startsWith('take')) {
-    console.log(`You take the ${input[1]}. You can now find it in your inventory.`)
+function doAction(input, location) { // This is a function that does something according to the action and returns the current location each time
+  input = input.split(' ')
+  let action = input[0]
+  let entity = input[1]
+  if (input.length > 2) entity = input.slice(1).join(' ') // If the room / item is two words
+    
+  if (action === 'read') {  
+    console.log(objLookup[entity].description)
+  } else if (action === 'take') {
+    console.log(`\nYou take the ${entity}. You can now find it in your inventory.`)
+  } else if (action === 'move') {
+    console.log(`\nMoving to ${entity}...`)
+    location = entity
   }
+  return location
 }
 
 
 
-function validateInput(input, validcmds, location) {
+function validateInput(input, validcmds, location) { // Function that validates all user input
   let action = input.split(' ')[0]
   let item = input.split(' ')[1]
+
+  if (input.split(' ').length > 2) item = input.split(' ').slice(1).join(' ') // If room / item is two words
+
   let availItems = locationLookup[location].items.map(obj => obj.name)
 
   if (!validcmds.includes(action)) { // Check if user entered a valid action
     console.log(`\nSorry, I don't know how to "${input}"...`)
     return false
   } else if (input.split(' ').length < 2) { // Check if user entered an item / room
-    (input === 'move') ? console.log('\nMove where?') : console.log(`\nWhat do you want me to ${input}?`)
+    (input === 'move') ? console.log('\nMove where?') : console.log(`\nWhat do you want to ${input}?`)
     return false
+  } else if (action === 'move' && !stateMachine[location].includes(item)) { // Check if player input action is move and the room ISN'T available
+    console.log(`\nI cant't go from here to there...`) 
+    return false
+  } else if (action === 'move' && stateMachine[location].includes(item)) { // Check if player input action is move and the room IS available
+    return true
   } else if (!availItems.includes(item)) { // Check if item exists in that room
     console.log(`\nI can't find a "${item}" in this room...`)
     return false
   } else if (!objLookup[item].actions.includes(action)) { // Check if action can be used on that item.
-    console.log(`\nI can't ${action} this object.`)
+    console.log(`\nI can't ${action} this item.`)
     return false
   } else {
     return true
