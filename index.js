@@ -10,10 +10,11 @@ function ask(questionText) {
 
 // CLASSES
 class Room {
-  constructor(name, description, items) {
+  constructor(name, description, items, isLocked) {
     this.name = name
     this.description = description
     this.items = items
+    this.isLocked = isLocked
   }
 }
 
@@ -52,6 +53,16 @@ let pastry = new Item(
   []
 )
 
+let keypad = new Item(
+  'keypad',
+  '\nA KEYPAD lock sits on the basement door..',
+  "\n>> Please type: CODE + ENTER <<",
+  ['inspect', '1245'],
+  false,
+  null,
+  []
+)
+
 let pottedPlant = new Item (
   'plant',
   "A potted PLANT sits next to the door. There's something suspicious about it...",
@@ -65,11 +76,31 @@ let pottedPlant = new Item (
 let stone = new Item (
   'stone',
   '\nA STONE with some writing inscribed on it sits inside of the pot. I wonder what it says?',
-  "\nI'm a stone with letters so old,\nMy writing tells of secrets untold.\nFollow the recipe that you seek,\nMy code unlocks the door with a creak.\nThe first three numbers are one, two, four,\nThe last one's odd, but not a bore.\nArrange them well and heed my sign,\nUnlock the door and what you seek you'll find.\n",
+  "\n\nI'm a stone with letters so old,\nMy writing tells of secrets untold.\nFollow the recipe that you seek,\nMy code unlocks the door with a creak.\nThe first three numbers are one, two, four,\nThe last one's odd, but not a bore.\nArrange them well and heed my sign,\nUnlock the door and what you seek you'll find.\n\n",
   ['inspect', 'take'],
   true,
   'stored',
   ['plant']
+)
+
+let box = new Item (
+  'box',
+  'A random BOX sits in the center of the room. I wonder what is inside of it...',
+  "I found the missing family recipe BOOK!!! It appears to have a sticky note attached to it..",
+  ['inspect'],
+  true,
+  'storage',
+  ['book']
+)
+
+let book = new Item (
+  'book',
+  "",
+  "\n\nDear valued customer,\n\nWe wanted to express our sincere gratitude for your help in finding our missing family recipe book. It means the world to us that you took the time to assist us in our time of need.\n\nAs a token of our appreciation, we wanted to offer you this book. We hope that you will enjoy trying out some of our family's favorite recipes.\n\nThank you again for your unwavering support. We truly appreciate it.\n\nWarm Regards,\nThe Brown Bear Cafe Owners\n\n",
+  ['inspect'],
+  false,
+  null,
+  []
 )
  // ________________________________________________________________________
 
@@ -78,25 +109,29 @@ let stone = new Item (
 const mainDining = new Room (
   "Main Dining Room",
   "\nYou are in the MAIN DINING area. You are facing the entrance to the PATIO. Behind you is a door to the KITCHEN.",
-  [note]
+  [note],
+  false
 )
 
 const patio = new Room (
   "Patio",
   "\nYou are on the PATIO. Behind you is the MAIN DINING room",
-  [pottedPlant, stone]
+  [pottedPlant, stone],
+  false
 )
 
 const kitchen = new Room (
   "Kitchen",
-  "\nYou are in the KITCHEN. The MAIN DINING room is in front of you.",
-  [pastry]
+  "\nYou are in the KITCHEN. The MAIN DINING room is in front of you. The BASEMENT door is behind you.",
+  [pastry, keypad],
+  false
 )
 
 const basement = new Room (
   "Basement",
   "\nYou are in the BASEMENT. The KITCHEN is just up the stairs.",
-  []
+  [book, box],
+  true
 )
  // ________________________________________________________________________
 
@@ -105,7 +140,7 @@ const basement = new Room (
 const stateMachine = {
   'main dining': ['patio', 'kitchen'],
   'patio': ['main dining'],
-  'kitchen': ['main dining'],
+  'kitchen': ['main dining', 'basement'],
   'basement': ['kitchen']
 }
 
@@ -120,7 +155,10 @@ const objLookup = {
   'note': note,
   'pastry': pastry,
   'plant': pottedPlant,
-  'stone': stone
+  'stone': stone,
+  'book': book,
+  'box': box,
+  'keypad': keypad
 }
  // ________________________________________________________________________
 
@@ -155,6 +193,10 @@ async function start() {
        currentRoom =  doAction(answer, currentRoom, inventory)
       }
       
+      if (currentRoom === 'the end') {
+        console.log("\n>>> CONGRATULATIONS! You won the game! <<<\nThank you for playing :)")
+        break
+      }
     }
   // ________________________________________________________________________
 
@@ -179,6 +221,10 @@ function doAction(input, location, inv) { // This is a function that does someth
       }
     }
     console.log(objLookup[entity].inspect)
+
+    if (entity === 'book') {
+      location = 'the end'
+    }
   } else if (action === 'take') {
     objLookup[entity].description = ''
 
@@ -201,6 +247,13 @@ function doAction(input, location, inv) { // This is a function that does someth
         console.log(itm.description)
       }
     })
+  } else if (entity === 'enter') {
+    if (action === '1245') {
+      locationLookup['basement'].isLocked = false
+      console.log('\n>> SUCCESS! <<\nYou unlocked the basement.')
+    } else {
+      console.log("\n>> NOT A VALID PASSWORD. PLEASE TRY AGAIN. <<")
+    }
   }
 
   return location
@@ -216,6 +269,10 @@ function validateInput(input, validcmds, location, inv, strcmds) { // Function t
   if (input.split(' ').length > 2) entity = input.split(' ').slice(1).join(' ') // If room / item is two words
 
   let availItems = locationLookup[location].items.map(obj => obj.name)
+
+  if (location === 'kitchen' && entity === 'enter') {
+    return true
+  }
 
   if (action === 'i') { // Displays inventory
     console.log(`\n INVENTORY:`)
@@ -233,6 +290,9 @@ function validateInput(input, validcmds, location, inv, strcmds) { // Function t
     return false
   } else if (action === 'move' && !stateMachine[location].includes(entity)) { // Check if player input action is move and the room ISN'T available
     console.log(`\nI cant't go from here to there...`) 
+    return false
+  } else if (action === 'move' && locationLookup[entity].isLocked === true){
+    console.log("\nI can't go here. This room is locked!")
     return false
   } else if (action === 'move' && stateMachine[location].includes(entity)) { // Check if player input action is move and the room IS available
     return true
