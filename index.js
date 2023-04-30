@@ -192,7 +192,7 @@ async function start() {
     if (validateInput(answer, validCommands, currentRoom, inventory, strCommands) === true) {
        currentRoom =  doAction(answer, currentRoom, inventory)
       }
-      
+  
       if (currentRoom === 'the end') {
         console.log("\n>>> CONGRATULATIONS! You won the game! <<<\nThank you for playing :)")
         break
@@ -212,42 +212,42 @@ function doAction(input, location, inv) { // This is a function that does someth
   let entity = input[1]
   if (input.length > 2) entity = input.slice(1).join(' ') // If the room / item is two words or more
     
-  if (action === 'inspect') { 
-    if (objLookup[entity].isStorage === true) {
-      if (objLookup[entity].storage.length === 0) {
+  if (action === 'inspect') { // Inspect displays an 'inspect' description correlated with the object its targeting
+    if (objLookup[entity].isStorage === true) { // When an item is storing another item...
+      if (objLookup[entity].storage.length === 0) { // Check if item was taken from container
         objLookup[entity].inspect = '\nThis is empty now!'
-      } else {
+      } else { // Else displays the description of the items in container
         objLookup[entity].storage.forEach (item => console.log(objLookup[item].description))
       }
     }
     console.log(objLookup[entity].inspect)
 
-    if (entity === 'book') {
+    if (entity === 'book') { // The last action that closes out the game
       location = 'the end'
     }
   } else if (action === 'take') {
     objLookup[entity].description = ''
 
-    if (inv.includes(entity)) {
+    if (inv.includes(entity)) { // Check if item is already in inventory
       console.log('\nYou already took this item')
     } else {
-      if (objLookup[entity].isStorage === true) {
+      if (objLookup[entity].isStorage === true) { // Removes the item from storage container when 'take' command is used on it
         let container = objLookup[entity].storage[0]
         objLookup[container].storage = objLookup[container].storage.filter (item => item !== entity)
       }
-      inv.push(objLookup[entity].name)
+      inv.push(objLookup[entity].name) // Adds item to inventory
       console.log(`\nYou take the ${entity}. You can now find it in your inventory.`)
     }
-  } else if (action === 'move') {
+  } else if (action === 'move') { // Moves location
     console.log(`\nMoving to ${entity}...`)
     location = entity
     console.log(locationLookup[location].description)
-    locationLookup[location].items.forEach (itm => { 
+    locationLookup[location].items.forEach (itm => { // Displays item descriptions in that room (ONLY if they are not inside of a container)
       if (itm.storageType === 'storage' || itm.storageType === null){
         console.log(itm.description)
       }
     })
-  } else if (entity === 'enter') {
+  } else if (entity === 'enter') { // Keypad entry
     if (action === '1245') {
       locationLookup['basement'].isLocked = false
       console.log('\n>> SUCCESS! <<\nYou unlocked the basement.')
@@ -270,7 +270,7 @@ function validateInput(input, validcmds, location, inv, strcmds) { // Function t
 
   let availItems = locationLookup[location].items.map(obj => obj.name)
 
-  if (location === 'kitchen' && entity === 'enter') {
+  if (location === 'kitchen' && entity === 'enter') { // Validate keypad entry when in the kitchen
     return true
   }
 
@@ -280,7 +280,7 @@ function validateInput(input, validcmds, location, inv, strcmds) { // Function t
     return false
   } else if (action === 'help'){ // Displays help info
     console.log(strcmds)
-    console.log(`\n>> Enter (command + item/room) to interact with your surroundings. <<\n>> Valid items/rooms are in all uppercase letters. <<`)
+    console.log(`\n>> Enter (command + item/room) to interact with your surroundings. <<\n>> Valid items/rooms are in all uppercase letters. <<\n>> HINT: All items can be interacted with by using the 'inspect' command! <<`)
     return false
   } else if (!validcmds.includes(action)) { // Check if user entered a valid action
     console.log(`\nSorry, I don't know how to "${input}"...`)
